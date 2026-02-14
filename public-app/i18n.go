@@ -46,10 +46,10 @@ type Translations struct {
 	ErrWhat4     string
 
 	ErrURLHint string
-	ErrFooter  string
 
 	// General
-	FooterThanks string
+	FooterThanksPrefix string // e.g. "Thanks - powered by" (TRixie will be a link)
+	ErrFooterDesc      string // e.g. "Secure Item Recovery System" (TRixie will be a link)
 }
 
 // ---------------------------------------------------------------------------
@@ -104,10 +104,10 @@ func translationsEN() Translations {
 		ErrWhat4:     "If this is your item, generate a new QR code from the admin panel",
 
 		ErrURLHint: "Valid item URLs must include a signature parameter, like:",
-		ErrFooter:  "TRixie - Secure Item Recovery System",
 
 		// General
-		FooterThanks: "Thanks - powered by TRixie",
+		FooterThanksPrefix: "Thanks - powered by",
+		ErrFooterDesc:      "Secure Item Recovery System",
 	}
 }
 
@@ -152,10 +152,9 @@ func translationsDE() Translations {
 		ErrWhat4:     "Wenn dies Ihr Gegenstand ist, erstellen Sie einen neuen QR-Code im Admin-Bereich",
 
 		ErrURLHint: "Gültige URLs müssen einen Signaturparameter enthalten, wie:",
-		ErrFooter:  "TRixie - Sicheres Fundsachen-System",
-
 		// General
-		FooterThanks: "Danke - bereitgestellt von TRixie",
+		FooterThanksPrefix: "Danke - bereitgestellt von",
+		ErrFooterDesc:      "Sicheres Fundsachen-System",
 	}
 }
 
