@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Add Items - TRixie</title>
+        <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css?family=Arvo:400,700,400italic"
+        />
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                border: 0;
+                font: inherit;
+                vertical-align: baseline;
+                box-sizing: border-box;
+            }
+            body {
+                font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+                font-size: 14px;
+                color: #232323;
+                background-color: #fbfaf7;
+                line-height: 1.6em;
+                -webkit-font-smoothing: antialiased;
+                margin: 0;
+                padding: 0;
+            }
+            .header {
+                background-color: #232323;
+                color: #ffffff;
+                padding: 15px 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+            .header h1 {
+                font-family: Arvo, Monaco, serif;
+                font-size: 24px;
+                font-weight: normal;
+                color: #ffffff;
+                margin: 0;
+                padding: 0;
+                border: none;
+            }
+            .header-nav {
+                display: flex;
+                gap: 20px;
+                align-items: center;
+            }
+            .header-nav a {
+                color: #ffffff;
+                text-decoration: none;
+                font-weight: 600;
+                white-space: nowrap;
+                transition: opacity 0.2s;
+            }
+            .header-nav a:hover {
+                opacity: 0.8;
+            }
+            .container {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 30px 20px;
+            }
+            h2 {
+                font-family: Arvo, Monaco, serif;
+                font-size: 24px;
+                font-weight: normal;
+                color: #232323;
+                margin: 30px 0 15px;
+                border-bottom: 1px solid #ccc;
+                padding-bottom: 5px;
+            }
+            .section {
+                background-color: #ffffff;
+                border: 1px solid #ccc;
+                border-radius: 8px;
+                padding: 30px;
+                margin: 30px 0;
+            }
+            .form-group {
+                margin-bottom: 20px;
+            }
+            label {
+                display: block;
+                font-weight: 600;
+                margin-bottom: 5px;
+                color: #232323;
+            }
+            input[type="text"],
+            input[type="number"],
+            select {
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                font-size: 14px;
+                font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            }
+            button {
+                display: inline-block;
+                background-color: #c30000;
+                color: #ffffff;
+                padding: 10px 20px;
+                border: none;
+                border-radius: 4px;
+                font-weight: 600;
+                cursor: pointer;
+                text-decoration: none;
+                transition: background-color 0.3s;
+            }
+            button:hover {
+                background-color: #a00000;
+            }
+            .help-text {
+                font-size: 12px;
+                color: #666;
+                margin-top: 5px;
+            }
+            .info-box {
+                background-color: #e3f2fd;
+                border-left: 4px solid #2196f3;
+                padding: 15px;
+                margin-bottom: 20px;
+                border-radius: 4px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>➕ Add Items</h1>
+            <div class="header-nav">
+                <a href="/">← Back to Items</a>
+                <a href="/settings">⚙️ Settings</a>
+                {{if .BaseURL}}
+                <a href="{{.BaseURL}}" target="_blank">🌐 View Public Site</a>
+                {{end}}
+            </div>
+        </div>
+        <div class="container">
+            <div class="info-box">
+                <strong></strong>Tip:</strong> Use batch creation to quickly generate
+                multiple items at once (e.g., ITEM-1 to ITEM-100).
+            </div>
+
+            <div class="section">
+                <h2>Add Items</h2>
+                <form action="/items" method="POST" id="add-item-form">
+                    <div class="form-group">
+                        <label>Creation Mode *</label>
+                        <div
+                            style="
+                                display: flex;
+                                gap: 20px;
+                                margin-bottom: 10px;
+                            "
+                        >
+                            <label
+                                style="
+                                    display: flex;
+                                    align-items: center;
+                                    font-weight: normal;
+                                "
+                            >
+                                <input
+                                    type="radio"
+                                    name="creation_mode"
+                                    value="batch"
+                                    id="creation-mode-batch"
+                                    style="width: auto; margin-right: 5px"
+                                    onchange="toggleCreationMode()"
+                                    {{if .Prefixes}}checked{{end}}
+                                />
+                                Batch Create (Multiple Items)
+                            </label>
+                            <label
+                                style="
+                                    display: flex;
+                                    align-items: center;
+                                    font-weight: normal;
+                                "
+                            >
+                                <input
+                                    type="radio"
+                                    name="creation_mode"
+                                    value="single"
+                                    id="creation-mode-single"
+                                    style="width: auto; margin-right: 5px"
+                                    onchange="toggleCreationMode()"
+                                    {{if not .Prefixes}}checked{{end}}
+                                />
+                                Single Item (Manual)
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Batch Creation Fields -->
+                    <div
+                        id="batch-creation-fields"
+                        style="{{if not .Prefixes}}display: none;{{end}}"
+                    >
+                        <div class="form-group">
+                            <label for="prefix-id">Select Prefix *</label>
+                            <select id="prefix-id" name="prefix_id">
+                                {{range .Prefixes}}
+                                <option value="{{.ID}}">
+                                    {{.Prefix}} (next:
+                                    {{.Prefix}}-{{.CurrentCounter}})
+                                </option>
+                                {{end}}
+                            </select>
+                            <div class="help-text">
+                                Items will be auto-numbered from this prefix
+                            </div>
+                        </div>
+                        <div
+                            class="form-group"
+                            style="
+                                display: grid;
+                                grid-template-columns: 1fr 1fr;
+                                gap: 10px;
+                            "
+                        >
+                            <div>
+                                <label for="range-start">Start Number *</label>
+                                <input
+                                    type="number"
+                                    id="range-start"
+                                    name="range_start"
+                                    min="1"
+                                    value="1"
+                                    style="width: 100%"
+                                />
+                            </div>
+                            <div>
+                                <label for="range-end">End Number *</label>
+                                <input
+                                    type="number"
+                                    id="range-end"
+                                    name="range_end"
+                                    min="1"
+                                    value="10"
+                                    style="width: 100%"
+                                />
+                            </div>
+                        </div>
+                        <div class="help-text" style="margin-top: -10px">
+                            Create items in range (e.g., 1-10 will create 10
+                            items). Max 1000 items per batch.
+                        </div>
+                        <div class="form-group">
+                            <label for="batch-description"
+                                >Description (for all items)</label
+                            >
+                            <input
+                                type="text"
+                                id="batch-description"
+                                name="description"
+                            />
+                            <div class="help-text">
+                                Optional description applied to all items in
+                                batch
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Single Item Creation Fields -->
+                    <div
+                        id="single-creation-fields"
+                        style="{{if .Prefixes}}display: none;{{end}}"
+                    >
+                        <div class="form-group">
+                            <label>Item Code Generation Method *</label>
+                            <div
+                                style="
+                                    display: flex;
+                                    gap: 20px;
+                                    margin-bottom: 10px;
+                                "
+                            >
+                                <label
+                                    style="
+                                        display: flex;
+                                        align-items: center;
+                                        font-weight: normal;
+                                    "
+                                >
+                                    <input
+                                        type="radio"
+                                        name="use_prefix"
+                                        value="yes"
+                                        id="use-prefix-yes"
+                                        style="width: auto; margin-right: 5px"
+                                        onchange="toggleItemCodeMethod()"
+                                        {{if .Prefixes}}checked{{end}}
+                                    />
+                                    Auto-generate from prefix
+                                </label>
+                                <label
+                                    style="
+                                        display: flex;
+                                        align-items: center;
+                                        font-weight: normal;
+                                    "
+                                >
+                                    <input
+                                        type="radio"
+                                        name="use_prefix"
+                                        value="no"
+                                        id="use-prefix-no"
+                                        style="width: auto; margin-right: 5px"
+                                        onchange="toggleItemCodeMethod()"
+                                        {{if not .Prefixes}}checked{{end}}
+                                    />
+                                    Enter manually
+                                </label>
+                            </div>
+                        </div>
+                        <div
+                            class="form-group"
+                            id="prefix-selection-single"
+                            style="{{if not .Prefixes}}display: none;{{end}}"
+                        >
+                            <label for="prefix-id-single"
+                                >Select Prefix *</label
+                            >
+                            <select
+                                id="prefix-id-single"
+                                name="prefix_id_single"
+                            >
+                                {{range .Prefixes}}
+                                <option value="{{.ID}}">
+                                    {{.Prefix}} (next:
+                                    {{.Prefix}}-{{.CurrentCounter}})
+                                </option>
+                                {{end}}
+                            </select>
+                            <div class="help-text">
+                                Item will be auto-numbered (e.g., ITEM-5)
+                            </div>
+                        </div>
+                        <div
+                            class="form-group"
+                            id="manual-code"
+                            style="{{if .Prefixes}}display: none;{{end}}"
+                        >
+                            <label for="item-code">Item Code *</label>
+                            <input type="text" id="item-code" name="item_code" />
+                            <div class="help-text">
+                                Unique identifier (e.g., KEY-001, BAG-2024)
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="single-description">Description</label>
+                            <input
+                                type="text"
+                                id="single-description"
+                                name="description"
+                            />
+                            <div class="help-text">
+                                Optional description of the item
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Common Fields -->
+                    <div class="form-group">
+                        <label for="item-owners">Owners *</label>
+                        <select
+                            id="item-owners"
+                            name="owner_ids"
+                            multiple
+                            required
+                        >
+                            {{range .Owners}}
+                            <option value="{{.ID}}">
+                                {{if .Initials}}{{.Initials}} - {{end}}{{.Name}}
+                                ({{.Email}})
+                            </option>
+                            {{end}}
+                        </select>
+                        <div class="help-text">
+                            Hold Ctrl/Cmd to select multiple owners
+                        </div>
+                    </div>
+                    <button type="submit" id="submit-button">
+                        Add Items
+                    </button>
+                </form>
+            </div>
+        </div>
+        <script>
+            function toggleCreationMode() {
+                const batchMode =
+                    document.getElementById("creation-mode-batch").checked;
+                const batchFields = document.getElementById(
+                    "batch-creation-fields",
+                );
+                const singleFields = document.getElementById(
+                    "single-creation-fields",
+                );
+                const submitButton = document.getElementById("submit-button");
+
+                if (batchMode) {
+                    batchFields.style.display = "block";
+                    singleFields.style.display = "none";
+                    submitButton.textContent = "Create Batch";
+                } else {
+                    batchFields.style.display = "none";
+                    singleFields.style.display = "block";
+                    submitButton.textContent = "Add Item";
+                    toggleItemCodeMethod();
+                }
+            }
+
+            function toggleItemCodeMethod() {
+                const usePrefixYes =
+                    document.getElementById("use-prefix-yes").checked;
+                const prefixSelection = document.getElementById(
+                    "prefix-selection-single",
+                );
+                const manualCode = document.getElementById("manual-code");
+                const itemCodeInput = document.getElementById("item-code");
+                const prefixIdSelect = document.getElementById(
+                    "prefix-id-single",
+                );
+
+                if (usePrefixYes) {
+                    prefixSelection.style.display = "block";
+                    manualCode.style.display = "none";
+                    itemCodeInput.removeAttribute("required");
+                    if (prefixIdSelect) {
+                        prefixIdSelect.setAttribute("required", "required");
+                    }
+                } else {
+                    prefixSelection.style.display = "none";
+                    manualCode.style.display = "block";
+                    itemCodeInput.setAttribute("required", "required");
+                    if (prefixIdSelect) {
+                        prefixIdSelect.removeAttribute("required");
+                    }
+                }
+            }
+
+            // Initialize on page load
+            document.addEventListener("DOMContentLoaded", function () {
+                toggleCreationMode();
+                toggleItemCodeMethod();
+            });
+
+            function saveItemFormState() {
+                const batchMode =
+                    document.getElementById("creation-mode-batch").checked;
+                const usePrefixYes =
+                    document.getElementById("use-prefix-yes").checked;
+                const prefixId = batchMode
+                    ? document.getElementById("prefix-id").value
+                    : document.getElementById("prefix-id-single").value;
+                const ownersSelect = document.getElementById("item-owners");
+                const selectedOwners = Array.from(
+                    ownersSelect.selectedOptions,
+                ).map((opt) => opt.value);
+
+                localStorage.setItem(
+                    "itemFormCreationMode",
+                    batchMode ? "batch" : "single",
+                );
+                localStorage.setItem("itemFormUsePrefix", usePrefixYes);
+                localStorage.setItem("itemFormPrefixId", prefixId);
+                localStorage.setItem(
+                    "itemFormSelectedOwners",
+                    JSON.stringify(selectedOwners),
+                );
+            }
+
+            function restoreItemFormState() {
+                const creationMode = localStorage.getItem(
+                    "itemFormCreationMode",
+                );
+                const usePrefix = localStorage.getItem("itemFormUsePrefix");
+                const prefixId = localStorage.getItem("itemFormPrefixId");
+                const selectedOwners = localStorage.getItem(
+                    "itemFormSelectedOwners",
+                );
+
+                if (creationMode !== null) {
+                    if (creationMode === "batch") {
+                        document.getElementById(
+                            "creation-mode-batch",
+                        ).checked = true;
+                    } else {
+                        document.getElementById(
+                            "creation-mode-single",
+                        ).checked = true;
+                    }
+                    toggleCreationMode();
+                }
+
+                if (usePrefix !== null) {
+                    if (usePrefix === "true") {
+                        document.getElementById("use-prefix-yes").checked =
+                            true;
+                    } else {
+                        document.getElementById("use-prefix-no").checked = true;
+                    }
+                    toggleItemCodeMethod();
+                }
+
+                if (prefixId) {
+                    const prefixSelectBatch =
+                        document.getElementById("prefix-id");
+                    const prefixSelectSingle = document.getElementById(
+                        "prefix-id-single",
+                    );
+                    if (prefixSelectBatch) {
+                        prefixSelectBatch.value = prefixId;
+                    }
+                    if (prefixSelectSingle) {
+                        prefixSelectSingle.value = prefixId;
+                    }
+                }
+
+                if (selectedOwners) {
+                    try {
+                        const owners = JSON.parse(selectedOwners);
+                        const ownersSelect =
+                            document.getElementById("item-owners");
+                        if (ownersSelect) {
+                            Array.from(ownersSelect.options).forEach((opt) => {
+                                if (owners.includes(opt.value)) {
+                                    opt.selected = true;
+                                }
+                            });
+                        }
+                    } catch (e) {
+                        console.error("Error restoring owners:", e);
+                    }
+                }
+            }
+
+            // Restore item form state on page load
+            document.addEventListener("DOMContentLoaded", function () {
+                restoreItemFormState();
+
+                // Save form state when submitting
+                const itemForm = document.getElementById("add-item-form");
+                if (itemForm) {
+                    itemForm.addEventListener("submit", function () {
+                        saveItemFormState();
+                    });
+                }
+            });
+        </script>
+    </body>
+</html>

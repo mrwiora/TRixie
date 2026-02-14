@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Edit Item - TRixie</title>
+        <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css?family=Arvo:400,700,400italic"
+        />
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                border: 0;
+                font: inherit;
+                vertical-align: baseline;
+                box-sizing: border-box;
+            }
+            body {
+                font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+                font-size: 14px;
+                color: #232323;
+                background-color: #fbfaf7;
+                line-height: 1.6em;
+                -webkit-font-smoothing: antialiased;
+                margin: 0;
+                padding: 0;
+            }
+            .header {
+                background-color: #232323;
+                color: #ffffff;
+                padding: 15px 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+            .header h1 {
+                font-family: Arvo, Monaco, serif;
+                font-size: 24px;
+                font-weight: normal;
+                color: #ffffff;
+                margin: 0;
+                padding: 0;
+                border: none;
+            }
+            .header-nav {
+                display: flex;
+                gap: 20px;
+                align-items: center;
+            }
+            .header-nav a {
+                color: #ffffff;
+                text-decoration: none;
+                font-weight: 600;
+                white-space: nowrap;
+                transition: opacity 0.2s;
+            }
+            .header-nav a:hover {
+                opacity: 0.8;
+            }
+            .container {
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 30px 20px;
+            }
+            .section {
+                background-color: #ffffff;
+                border: 1px solid #ccc;
+                border-radius: 8px;
+                padding: 30px;
+                margin: 30px 0;
+            }
+            .form-group {
+                margin-bottom: 20px;
+            }
+            label {
+                display: block;
+                font-weight: 600;
+                margin-bottom: 5px;
+                color: #232323;
+            }
+            input[type="text"],
+            input[type="email"],
+            select {
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                font-size: 14px;
+                font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            }
+            select[multiple] {
+                height: 120px;
+            }
+            button,
+            .button {
+                display: inline-block;
+                background-color: #c30000;
+                color: #ffffff;
+                padding: 10px 20px;
+                border: none;
+                border-radius: 4px;
+                font-weight: 600;
+                cursor: pointer;
+                text-decoration: none;
+                transition: background-color 0.3s;
+            }
+            button:hover,
+            .button:hover {
+                background-color: #a00000;
+            }
+            .button-secondary {
+                background-color: #666;
+            }
+            .button-secondary:hover {
+                background-color: #444;
+            }
+            .help-text {
+                font-size: 12px;
+                color: #666;
+                margin-top: 5px;
+            }
+            .button-group {
+                display: flex;
+                gap: 10px;
+                margin-top: 20px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>✏️ Edit Item</h1>
+            <div class="header-nav">
+                <a href="/">← Back to Admin</a>
+                <a href="/settings">⚙️ Settings</a>
+            </div>
+        </div>
+        <div class="container">
+            <div class="section">
+                <form action="/items/edit" method="POST">
+                    <input type="hidden" name="id" value="{{.Item.ID}}" />
+
+                    <div class="form-group">
+                        <label for="item-code">Item Code *</label>
+                        <input
+                            type="text"
+                            id="item-code"
+                            name="item_code"
+                            value="{{.Item.ItemCode}}"
+                            required
+                        />
+                        <div class="help-text">
+                            You can edit the item code directly. If it was
+                            auto-generated from a prefix, editing it here won't
+                            affect the prefix counter.
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="item-description">Description</label>
+                        <input
+                            type="text"
+                            id="item-description"
+                            name="description"
+                            value="{{.Item.Description}}"
+                        />
+                        <div class="help-text">
+                            Optional description of the item
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="item-owners">Owners *</label>
+                        <select
+                            id="item-owners"
+                            name="owner_ids"
+                            multiple
+                            required
+                        >
+                            {{range .Owners}} {{$ownerID := .ID}}
+                            <option
+                                value="{{.ID}}"
+                                {{range
+                                $.Item.Owners}}{{if
+                                eq
+                                .ID
+                                $ownerID}}selected{{end}}{{end}}
+                            >
+                                {{if .Initials}}{{.Initials}} - {{end}}{{.Name}}
+                                ({{.Email}})
+                            </option>
+                            {{end}}
+                        </select>
+                        <div class="help-text">
+                            Hold Ctrl/Cmd to select multiple owners. Currently
+                            selected: {{range $index, $owner :=
+                            .Item.Owners}}{{if $index}}, {{end}}{{if
+                            $owner.Initials}}{{$owner.Initials}}{{else}}{{$owner.Name}}{{end}}{{end}}
+                        </div>
+                    </div>
+
+                    <div class="button-group">
+                        <button type="submit">Save Changes</button>
+                        <a href="/" class="button button-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </body>
+</html>

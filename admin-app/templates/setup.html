@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Setup - TRixie</title>
+        <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css?family=Arvo:400,700,400italic"
+        />
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                border: 0;
+                font: inherit;
+                vertical-align: baseline;
+                box-sizing: border-box;
+            }
+            body {
+                font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+                font-size: 14px;
+                color: #232323;
+                background-color: #fbfaf7;
+                line-height: 1.6em;
+                -webkit-font-smoothing: antialiased;
+                margin: 0;
+                padding: 0;
+            }
+            .header {
+                background-color: #232323;
+                color: #ffffff;
+                padding: 15px 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+            .header h1 {
+                font-family: Arvo, Monaco, serif;
+                font-size: 24px;
+                font-weight: normal;
+                color: #ffffff;
+                margin: 0;
+                padding: 0;
+                border: none;
+            }
+            .header-nav {
+                display: flex;
+                gap: 20px;
+                align-items: center;
+            }
+            .header-nav a {
+                color: #ffffff;
+                text-decoration: none;
+                font-weight: 600;
+                white-space: nowrap;
+                transition: opacity 0.2s;
+            }
+            .header-nav a:hover {
+                opacity: 0.8;
+            }
+            .container {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 30px 20px;
+            }
+
+            h2 {
+                font-family: Arvo, Monaco, serif;
+                font-size: 24px;
+                font-weight: normal;
+                color: #232323;
+                margin: 30px 0 15px;
+                border-bottom: 1px solid #ccc;
+                padding-bottom: 5px;
+            }
+
+            .section {
+                background-color: #ffffff;
+                border: 1px solid #ccc;
+                border-radius: 8px;
+                padding: 30px;
+                margin: 30px 0;
+            }
+            .form-group {
+                margin-bottom: 20px;
+            }
+            label {
+                display: block;
+                font-weight: 600;
+                margin-bottom: 5px;
+                color: #232323;
+            }
+            input[type="text"],
+            input[type="email"],
+            input[type="url"],
+            select {
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                font-size: 14px;
+                font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            }
+            button,
+            .button {
+                display: inline-block;
+                background-color: #c30000;
+                color: #ffffff;
+                padding: 10px 20px;
+                border: none;
+                border-radius: 4px;
+                font-weight: 600;
+                cursor: pointer;
+                text-decoration: none;
+                transition: background-color 0.3s;
+            }
+            button:hover,
+            .button:hover {
+                background-color: #a00000;
+            }
+            .button-secondary {
+                background-color: #666;
+            }
+            .button-secondary:hover {
+                background-color: #444;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 20px;
+            }
+            th,
+            td {
+                padding: 12px;
+                text-align: left;
+                border-bottom: 1px solid #ccc;
+            }
+            th {
+                background-color: #f0f0f0;
+                font-weight: 600;
+                color: #232323;
+            }
+            tr:hover {
+                background-color: #f9f9f9;
+            }
+            .tag {
+                display: inline-block;
+                background-color: #e9e9e9;
+                padding: 4px 8px;
+                border-radius: 3px;
+                font-size: 12px;
+                margin: 2px;
+            }
+            .empty-state {
+                text-align: center;
+                padding: 40px;
+                color: #666;
+                font-style: italic;
+            }
+            .help-text {
+                font-size: 12px;
+                color: #666;
+                margin-top: 5px;
+            }
+            .info-box {
+                background-color: #e3f2fd;
+                border-left: 4px solid #2196f3;
+                padding: 15px;
+                margin-bottom: 20px;
+                border-radius: 4px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>🚀 TRixie - Setup</h1>
+            <div class="header-nav">
+                <!-- No navigation links during setup -->
+            </div>
+        </div>
+        <div class="container">
+            <div class="nav">
+                <div class="info-box">
+                    <strong>Welcome to TRixie!</strong><br />
+                    Please configure the system before getting started. You can
+                    always change these settings later.
+                </div>
+            </div>
+
+            <!-- System Configuration -->
+            <div class="section">
+                <h2>⚙️ System Configuration</h2>
+                <div style="margin-bottom: 20px">
+                    <div class="form-group">
+                        <label
+                            style="
+                                font-weight: 600;
+                                margin-bottom: 10px;
+                                display: block;
+                            "
+                        >
+                            Cryptographic Signature Key
+                        </label>
+                        <div
+                            style="
+                                display: flex;
+                                gap: 10px;
+                                align-items: center;
+                            "
+                        >
+                            <input
+                                type="text"
+                                value="{{.SignatureKey}}"
+                                readonly
+                                style="
+                                    font-family: monospace;
+                                    background-color: #f0f0f0;
+                                    flex: 1;
+                                "
+                            />
+                            <button
+                                type="button"
+                                onclick="copySignatureKey()"
+                                class="button-secondary"
+                                style="white-space: nowrap"
+                            >
+                                📋 Copy
+                            </button>
+                        </div>
+                        <div class="help-text">
+                            This key is used to sign QR code URLs. Keep it
+                            secure and never share it publicly.
+                        </div>
+                    </div>
+                </div>
+
+                <form action="/config" method="POST">
+                    <div class="form-group">
+                        <label for="base-url">Base URL *</label>
+                        <input
+                            type="url"
+                            id="base-url"
+                            name="base_url"
+                            value="{{.BaseURL}}"
+                            placeholder="https://example.com"
+                            required
+                        />
+                        <div class="help-text">
+                            The base URL for generating QR code links (e.g.,
+                            https://example.com). This is stored in the database
+                            and used for all QR code generation.
+                        </div>
+                    </div>
+                    <button type="submit">💾 Save Configuration</button>
+                </form>
+            </div>
+
+            <!-- Item Identifier Prefixes -->
+            <div class="section">
+                <h2>Item Identifier Prefixes ({{len .Prefixes}})</h2>
+                <div style="margin-bottom: 20px">
+                    <form
+                        action="/prefixes"
+                        method="POST"
+                        style="display: flex; gap: 10px; align-items: flex-end"
+                    >
+                        <div
+                            class="form-group"
+                            style="flex: 1; margin-bottom: 0"
+                        >
+                            <label for="prefix">New Prefix</label>
+                            <input
+                                type="text"
+                                id="prefix"
+                                name="prefix"
+                                placeholder="e.g., ITEM, KEY, BAG"
+                                required
+                                style="text-transform: uppercase"
+                            />
+                        </div>
+                        <button type="submit" style="height: 42px">
+                            Add Prefix
+                        </button>
+                    </form>
+                    <div class="help-text" style="margin-top: 10px">
+                        Prefixes are used to auto-generate item codes like
+                        ITEM-1, ITEM-2, etc.
+                    </div>
+                </div>
+                {{if .Prefixes}}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Prefix</th>
+                            <th>Next Number</th>
+                            <th>Next Code</th>
+                            <th>Created</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range .Prefixes}}
+                        <tr>
+                            <td><strong>{{.Prefix}}</strong></td>
+                            <td>{{.CurrentCounter}}</td>
+                            <td>
+                                <span class="tag"
+                                    >{{.Prefix}}-{{.CurrentCounter}}</span
+                                >
+                            </td>
+                            <td>{{.CreatedAt}}</td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+                {{else}}
+                <div class="empty-state">
+                    No prefixes defined yet. Add a prefix above to enable
+                    auto-generated item codes!
+                </div>
+                {{end}}
+            </div>
+
+            <!-- Registered Owners -->
+            <div class="section">
+                <h2>Registered Owners ({{len .Owners}})</h2>
+                <div style="margin-bottom: 20px">
+                    <a href="/owners" class="button">➕ Add New Owner</a>
+                </div>
+                {{if .Owners}}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Display Options</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range .Owners}}
+                        <tr>
+                            <td>{{.Name}}</td>
+                            <td>{{.Email}}</td>
+                            <td>{{if .Phone}}{{.Phone}}{{else}}-{{end}}</td>
+                            <td>
+                                {{if .PhoneDisplayOptions}}
+                                <span style="font-size: 11px"
+                                    >{{.PhoneDisplayOptions}}</span
+                                >
+                                {{else}}-{{end}}
+                            </td>
+                            <td>{{.CreatedAt}}</td>
+                            <td>
+                                <a
+                                    href="/owners/edit?id={{.ID}}"
+                                    style="
+                                        color: #c30000;
+                                        text-decoration: none;
+                                        font-weight: 600;
+                                    "
+                                    >✏️ Edit</a
+                                >
+                            </td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+                {{else}}
+                <div class="empty-state">
+                    No owners registered yet. Add your first owner to continue!
+                </div>
+                {{end}}
+            </div>
+
+            <!-- Complete Setup Button -->
+            <div class="section" style="text-align: center; padding: 40px">
+                <form action="/setup" method="POST">
+                    <button
+                        type="submit"
+                        style="font-size: 18px; padding: 15px 40px"
+                    >
+                        ✅ Complete Setup & Continue
+                    </button>
+                </form>
+                <div class="help-text" style="margin-top: 15px">
+                    You can always change these settings later in the Settings
+                    page.
+                </div>
+            </div>
+        </div>
+        <script>
+            function copySignatureKey() {
+                const keyInput = document.querySelector(
+                    'input[value="{{.SignatureKey}}"]',
+                );
+                if (keyInput) {
+                    keyInput.select();
+                    document.execCommand("copy");
+                    alert("Signature key copied to clipboard!");
+                }
+            }
+        </script>
+    </body>
+</html>

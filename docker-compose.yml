@@ -1,0 +1,44 @@
+version: "3.8"
+
+services:
+  admin:
+    build:
+      context: ./admin-app
+      dockerfile: ../Dockerfile.admin
+    container_name: qr-tracker-admin
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./data:/data
+    environment:
+      - PORT=9090
+      - DB_PATH=/data/qr-tracker.db
+    restart: unless-stopped
+    networks:
+      - qr-tracker-net
+
+  public:
+    build:
+      context: ./public-app
+      dockerfile: ../Dockerfile.public
+    container_name: qr-tracker-public
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data:ro
+    environment:
+      - PORT=8080
+      - DB_PATH=/data/qr-tracker.db
+    restart: unless-stopped
+    depends_on:
+      - admin
+    networks:
+      - qr-tracker-net
+
+networks:
+  qr-tracker-net:
+    driver: bridge
+
+volumes:
+  data:
+    driver: local

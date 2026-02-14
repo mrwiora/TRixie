@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Settings - TRixie</title>
+        <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css?family=Arvo:400,700,400italic"
+        />
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                border: 0;
+                font: inherit;
+                vertical-align: baseline;
+                box-sizing: border-box;
+            }
+            body {
+                font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+                font-size: 14px;
+                color: #232323;
+                background-color: #fbfaf7;
+                line-height: 1.6em;
+                -webkit-font-smoothing: antialiased;
+                margin: 0;
+                padding: 0;
+            }
+            .header {
+                background-color: #232323;
+                color: #ffffff;
+                padding: 15px 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+            .header h1 {
+                font-family: Arvo, Monaco, serif;
+                font-size: 24px;
+                font-weight: normal;
+                color: #ffffff;
+                margin: 0;
+                padding: 0;
+                border: none;
+            }
+            .header-nav {
+                display: flex;
+                gap: 20px;
+                align-items: center;
+            }
+            .header-nav a {
+                color: #ffffff;
+                text-decoration: none;
+                font-weight: 600;
+                white-space: nowrap;
+                transition: opacity 0.2s;
+            }
+            .header-nav a:hover {
+                opacity: 0.8;
+            }
+            .container {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 30px 20px;
+            }
+
+            h2 {
+                font-family: Arvo, Monaco, serif;
+                font-size: 24px;
+                font-weight: normal;
+                color: #232323;
+                margin: 30px 0 15px;
+                border-bottom: 1px solid #ccc;
+                padding-bottom: 5px;
+            }
+
+            .section {
+                background-color: #ffffff;
+                border: 1px solid #ccc;
+                border-radius: 8px;
+                padding: 30px;
+                margin: 30px 0;
+            }
+            .form-group {
+                margin-bottom: 20px;
+            }
+            label {
+                display: block;
+                font-weight: 600;
+                margin-bottom: 5px;
+                color: #232323;
+            }
+            input[type="text"],
+            input[type="email"],
+            input[type="url"],
+            select {
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                font-size: 14px;
+                font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            }
+            button,
+            .button {
+                display: inline-block;
+                background-color: #c30000;
+                color: #ffffff;
+                padding: 10px 20px;
+                border: none;
+                border-radius: 4px;
+                font-weight: 600;
+                cursor: pointer;
+                text-decoration: none;
+                transition: background-color 0.3s;
+            }
+            button:hover,
+            .button:hover {
+                background-color: #a00000;
+            }
+            .button-secondary {
+                background-color: #666;
+            }
+            .button-secondary:hover {
+                background-color: #444;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 20px;
+            }
+            th,
+            td {
+                padding: 12px;
+                text-align: left;
+                border-bottom: 1px solid #ccc;
+            }
+            th {
+                background-color: #f0f0f0;
+                font-weight: 600;
+                color: #232323;
+            }
+            tr:hover {
+                background-color: #f9f9f9;
+            }
+            .tag {
+                display: inline-block;
+                background-color: #e9e9e9;
+                padding: 4px 8px;
+                border-radius: 3px;
+                font-size: 12px;
+                margin: 2px;
+            }
+            .empty-state {
+                text-align: center;
+                padding: 40px;
+                color: #666;
+                font-style: italic;
+            }
+            .help-text {
+                font-size: 12px;
+                color: #666;
+                margin-top: 5px;
+            }
+            .info-box {
+                background-color: #e3f2fd;
+                border-left: 4px solid #2196f3;
+                padding: 15px;
+                margin-bottom: 20px;
+                border-radius: 4px;
+            }
+            .modal {
+                display: none;
+                position: fixed;
+                z-index: 1000;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.5);
+            }
+            .modal-content {
+                background-color: #ffffff;
+                margin: 15% auto;
+                padding: 30px;
+                border-radius: 8px;
+                width: 400px;
+                max-width: 90%;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            }
+            .modal-header {
+                font-size: 20px;
+                font-weight: bold;
+                margin-bottom: 20px;
+                color: #232323;
+            }
+            .modal-body {
+                margin-bottom: 20px;
+            }
+            .version-info {
+                margin: 10px 0;
+                font-size: 14px;
+                color: #666;
+            }
+            .version-info strong {
+                display: inline-block;
+                width: 100px;
+                color: #232323;
+            }
+            .close-modal {
+                background-color: #007acc;
+                color: white;
+                padding: 10px 20px;
+                border-radius: 4px;
+                cursor: pointer;
+                border: none;
+                font-size: 14px;
+            }
+            .close-modal:hover {
+                background-color: #005fa3;
+            }
+            .header h1 {
+                cursor: pointer;
+            }
+            .header h1:hover {
+                opacity: 0.8;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- Version Modal -->
+        <div id="versionModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">TRixie Version Information</div>
+                <div class="modal-body">
+                    <div class="version-info">
+                        <strong>Version:</strong> {{.Version}}
+                    </div>
+                    <div class="version-info">
+                        <strong>Git Commit:</strong> {{.GitCommit}}
+                    </div>
+                    <div class="version-info">
+                        <strong>Build Time:</strong> {{.BuildTime}}
+                    </div>
+                </div>
+                <button class="close-modal" onclick="closeVersionModal()">
+                    Close
+                </button>
+            </div>
+        </div>
+
+        <div class="header">
+            <h1
+                onclick="showVersionModal()"
+                title="Click to view version information"
+            >
+                ⚙️ TRixie - Settings
+            </h1>
+            <div class="header-nav">
+                <a href="/">← Back to Admin</a>
+                {{if .BaseURL}}
+                <a href="{{.BaseURL}}" target="_blank">🌐 View Public Site</a>
+                {{end}}
+            </div>
+        </div>
+        <div class="container">
+            <!-- System Configuration -->
+            <div class="section">
+                <h2>⚙️ System Configuration</h2>
+                <div style="margin-bottom: 20px">
+                    <div class="form-group">
+                        <label
+                            style="
+                                font-weight: 600;
+                                margin-bottom: 10px;
+                                display: block;
+                            "
+                        >
+                            Cryptographic Signature Key
+                        </label>
+                        <div
+                            style="
+                                display: flex;
+                                gap: 10px;
+                                align-items: center;
+                            "
+                        >
+                            <input
+                                type="text"
+                                value="{{.SignatureKey}}"
+                                readonly
+                                style="
+                                    font-family: monospace;
+                                    background-color: #f0f0f0;
+                                    flex: 1;
+                                "
+                            />
+                            <button
+                                type="button"
+                                onclick="copySignatureKey()"
+                                class="button-secondary"
+                                style="white-space: nowrap"
+                            >
+                                📋 Copy
+                            </button>
+                        </div>
+                        <div class="help-text">
+                            This key is used to sign QR code URLs. Keep it
+                            secure and never share it publicly.
+                        </div>
+                    </div>
+                </div>
+
+                <form action="/config" method="POST">
+                    <div class="form-group">
+                        <label for="base-url">Base URL *</label>
+                        <input
+                            type="url"
+                            id="base-url"
+                            name="base_url"
+                            value="{{.BaseURL}}"
+                            placeholder="https://example.com"
+                            required
+                        />
+                        <div class="help-text">
+                            The base URL for generating QR code links (e.g.,
+                            https://example.com). This is stored in the database
+                            and used for all QR code generation.
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="item-path-prefix">Item Path Prefix</label>
+                        <input
+                            type="text"
+                            id="item-path-prefix"
+                            name="item_path_prefix"
+                            value="{{.ItemPathPrefix}}"
+                            placeholder="Leave empty for no prefix (shorter URLs)"
+                        />
+                        <div class="help-text">
+                            Optional path prefix for item URLs. Leave empty for
+                            shorter URLs like <code>/ITEM-123?sig=...</code> or
+                            set to "item" for
+                            <code>/item/ITEM-123?sig=...</code>
+                        </div>
+                    </div>
+                    <button type="submit">💾 Save Configuration</button>
+                </form>
+            </div>
+
+            <!-- QR Code Settings -->
+            <div class="section">
+                <h2>📱 QR Code Settings</h2>
+                <form action="/qr/config" method="POST">
+                    <div class="form-group">
+                        <label for="qr-size">QR Code Size (pixels)</label>
+                        <input
+                            type="number"
+                            id="qr-size"
+                            name="qr_size"
+                            value="{{.QRSize}}"
+                            min="32"
+                            max="1024"
+                            step="1"
+                            required
+                        />
+                        <div class="help-text">
+                            Size of the QR code content in pixels (border is added on top of this). Range: 32-1024. Default: 256. Images are encoded at 300 DPI.
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="qr-error-correction">Error Correction Level</label>
+                        <select id="qr-error-correction" name="qr_error_correction" required>
+                            <option value="low" {{if eq .QRErrorCorrection "low"}}selected{{end}}>Low (7% recovery)</option>
+                            <option value="medium" {{if eq .QRErrorCorrection "medium"}}selected{{end}}>Medium (15% recovery) - Recommended</option>
+                            <option value="high" {{if eq .QRErrorCorrection "high"}}selected{{end}}>High (25% recovery)</option>
+                            <option value="highest" {{if eq .QRErrorCorrection "highest"}}selected{{end}}>Highest (30% recovery)</option>
+                        </select>
+                        <div class="help-text">
+                            Higher error correction allows QR codes to be scanned even if partially damaged or obscured. Higher levels create denser QR codes.
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="qr-overlay">Text Overlay</label>
+                        <select id="qr-overlay" name="qr_overlay" required>
+                            <option value="none" {{if eq .QROverlay "none"}}selected{{end}}>None</option>
+                            <option value="initials" {{if eq .QROverlay "initials"}}selected{{end}}>Owner Initials</option>
+                            <option value="lastname" {{if eq .QROverlay "lastname"}}selected{{end}}>Owner Last Name</option>
+                        </select>
+                        <div class="help-text">
+                            Add text overlay in the center of QR codes. Text is displayed on a white background. For multiple owners, all names are combined (e.g., "JB JD" or "Biden Doe").
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="qr-font-size">Overlay Font Size (pixels)</label>
+                        <input
+                            type="number"
+                            id="qr-font-size"
+                            name="qr_font_size"
+                            value="{{.QRFontSize}}"
+                            min="0"
+                            max="200"
+                            step="2"
+                        />
+                        <div class="help-text">
+                            Font size for overlay text in pixels. Set to 0 for auto-calculation based on QR code size. Range: 0-200.
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="qr-border">Border Width (pixels)</label>
+                        <input
+                            type="number"
+                            id="qr-border"
+                            name="qr_border"
+                            value="{{.QRBorder}}"
+                            min="1"
+                            max="100"
+                            step="1"
+                            required
+                        />
+                        <div class="help-text">
+                            Width of the quiet zone (white border) added around the QR code in pixels. This is added on top of the QR code size. Default: 16 pixels. Range: 1-100.
+                        </div>
+                    </div>
+                    <button type="submit">💾 Save QR Settings</button>
+                </form>
+            </div>
+
+            <!-- Identifier Prefixes -->
+            <div class="section">
+                <h2>🏷️ Item Identifier Prefixes ({{len .Prefixes}})</h2>
+                <div style="margin-bottom: 20px">
+                    <form
+                        action="/prefixes"
+                        method="POST"
+                        style="display: flex; gap: 10px; align-items: flex-end"
+                    >
+                        <div
+                            class="form-group"
+                            style="flex: 1; margin-bottom: 0"
+                        >
+                            <label for="prefix">New Prefix</label>
+                            <input
+                                type="text"
+                                id="prefix"
+                                name="prefix"
+                                placeholder="e.g., ITEM, KEY, BAG"
+                                required
+                                style="text-transform: uppercase"
+                            />
+                        </div>
+                        <button type="submit" style="height: 42px">
+                            Add Prefix
+                        </button>
+                    </form>
+                    <div class="help-text" style="margin-top: 10px">
+                        Prefixes are used to auto-generate item codes like
+                        ITEM-1, ITEM-2, etc.
+                    </div>
+                </div>
+                {{if .Prefixes}}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Prefix</th>
+                            <th>Next Number</th>
+                            <th>Next Code</th>
+                            <th>Created</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range .Prefixes}}
+                        <tr>
+                            <td><strong>{{.Prefix}}</strong></td>
+                            <td>{{.CurrentCounter}}</td>
+                            <td>
+                                <span class="tag"
+                                    >{{.Prefix}}-{{.CurrentCounter}}</span
+                                >
+                            </td>
+                            <td>{{.CreatedAt}}</td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+                {{else}}
+                <div class="empty-state">
+                    No prefixes defined yet. Add a prefix above to enable
+                    auto-generated item codes!
+                </div>
+                {{end}}
+            </div>
+
+            <!-- Registered Owners -->
+            <div class="section">
+                <h2>Registered Owners ({{len .Owners}})</h2>
+                <div style="margin-bottom: 20px">
+                    <a href="/owners" class="button">➕ Add New Owner</a>
+                </div>
+                {{if .Owners}}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Initials</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Display Options</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range .Owners}}
+                        <tr>
+                            <td>{{.Name}}</td>
+                            <td>
+                                {{if
+                                .Initials}}<strong>{{.Initials}}</strong>{{else}}-{{end}}
+                            </td>
+                            <td>{{.Email}}</td>
+                            <td>{{if .Phone}}{{.Phone}}{{else}}-{{end}}</td>
+                            <td>
+                                {{if .PhoneDisplayOptions}}
+                                <span style="font-size: 11px"
+                                    >{{.PhoneDisplayOptions}}</span
+                                >
+                                {{else}}-{{end}}
+                            </td>
+                            <td>{{.CreatedAt}}</td>
+                            <td>
+                                <a
+                                    href="/owners/edit?id={{.ID}}"
+                                    style="
+                                        color: #c30000;
+                                        text-decoration: none;
+                                        font-weight: 600;
+                                    "
+                                    >✏️ Edit</a
+                                >
+                            </td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+                {{else}}
+                <div class="empty-state">
+                    No owners registered yet. Add your first owner to continue!
+                </div>
+                {{end}}
+            </div>
+        </div>
+        <script>
+            function copySignatureKey() {
+                const keyInput = document.querySelector(
+                    'input[value="{{.SignatureKey}}"]',
+                );
+                if (keyInput) {
+                    keyInput.select();
+                    document.execCommand("copy");
+                    alert("Signature key copied to clipboard!");
+                }
+            }
+
+            function showVersionModal() {
+                document.getElementById("versionModal").style.display = "block";
+            }
+
+            function closeVersionModal() {
+                document.getElementById("versionModal").style.display = "none";
+            }
+
+            // Close modal when clicking outside of it
+            window.onclick = function (event) {
+                const modal = document.getElementById("versionModal");
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                }
+            };
+        </script>
+    </body>
+</html>
