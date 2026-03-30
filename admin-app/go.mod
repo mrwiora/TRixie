@@ -1,6 +1,6 @@
 module qr-item-tracker-admin
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/fogleman/gg v1.3.0
@@ -8,7 +8,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.34
 	github.com/yeqown/go-qrcode/v2 v2.2.5
 	github.com/yeqown/go-qrcode/writer/standard v1.3.0
-	golang.org/x/image v0.34.0
+	golang.org/x/image v0.38.0
 )
 
 require (
