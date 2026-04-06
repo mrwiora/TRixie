@@ -1,0 +1,352 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  TRixie Public App — Serverless deployment (pure CloudFormation, no SAM CLI).
+  All resource names are prefixed with the stack name.
+
+Parameters:
+  StageName:
+    Type: String
+    Default: $default
+    Description: API Gateway stage name ($default = no path prefix)
+
+  ThrottleRateLimit:
+    Type: Number
+    Default: 1
+    Description: Steady-state requests per second
+
+  ThrottleBurstLimit:
+    Type: Number
+    Default: 5
+    Description: Maximum burst of concurrent requests
+
+  PublicLambdaS3Bucket:
+    Type: String
+    Description: S3 bucket containing the Lambda deployment ZIPs
+
+  PublicLambdaS3Key:
+    Type: String
+    Default: lambda/trixie-public.zip
+    Description: S3 key for the public Lambda deployment ZIP
+
+  SyncLambdaS3Key:
+    Type: String
+    Default: lambda/trixie-sync.zip
+    Description: S3 key for the sync Lambda deployment ZIP
+
+  LogRetentionDays:
+    Type: Number
+    Default: 14
+    AllowedValues: [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365]
+    Description: Number of days to retain CloudWatch log events
+
+Resources:
+  # ================================================================
+  #  DynamoDB
+  # ================================================================
+  TrixieTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${AWS::StackName}-table"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Application
+          Value: !Ref AWS::StackName
+
+  # ================================================================
+  #  CloudWatch Log Groups
+  # ================================================================
+  PublicFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${AWS::StackName}-public"
+      RetentionInDays: !Ref LogRetentionDays
+      Tags:
+        - Key: Application
+          Value: !Ref AWS::StackName
+
+  SyncFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${AWS::StackName}-sync"
+      RetentionInDays: !Ref LogRetentionDays
+      Tags:
+        - Key: Application
+          Value: !Ref AWS::StackName
+
+  ApiGatewayLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/apigateway/${AWS::StackName}-api"
+      RetentionInDays: !Ref LogRetentionDays
+      Tags:
+        - Key: Application
+          Value: !Ref AWS::StackName
+
+  # ================================================================
+  #  IAM Role — Public Lambda
+  # ================================================================
+  PublicFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AWS::StackName}-public-lambda-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub "${AWS::StackName}-public-logs"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${AWS::StackName}-public:*"
+        - PolicyName: !Sub "${AWS::StackName}-public-dynamodb"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:Query
+                  - dynamodb:DescribeTable
+                Resource:
+                  - !GetAtt TrixieTable.Arn
+
+  # ================================================================
+  #  Public Lambda Function
+  # ================================================================
+  PublicFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: PublicFunctionLogGroup
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-public"
+      Description: !Sub "${AWS::StackName} public item-lookup Lambda"
+      Runtime: provided.al2023
+      Architectures:
+        - arm64
+      Handler: bootstrap
+      MemorySize: 128
+      Timeout: 10
+      Role: !GetAtt PublicFunctionRole.Arn
+      Code:
+        S3Bucket: !Ref PublicLambdaS3Bucket
+        S3Key: !Ref PublicLambdaS3Key
+      LoggingConfig:
+        LogGroup: !Ref PublicFunctionLogGroup
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: !Ref TrixieTable
+      Tags:
+        - Key: Application
+          Value: !Ref AWS::StackName
+
+  # ================================================================
+  #  API Gateway (HTTP API v2)
+  # ================================================================
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub "${AWS::StackName}-api"
+      ProtocolType: HTTP
+      Description: !Sub "${AWS::StackName} public HTTP API"
+      Tags:
+        Application: !Ref AWS::StackName
+
+  ApiIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt PublicFunction.Arn
+      PayloadFormatVersion: "2.0"
+
+  RouteDefault:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: "$default"
+      Target: !Sub "integrations/${ApiIntegration}"
+
+  ApiStage:
+    Type: AWS::ApiGatewayV2::Stage
+    DependsOn:
+      - RouteDefault
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: !Ref StageName
+      AutoDeploy: true
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: !Ref ThrottleBurstLimit
+        ThrottlingRateLimit: !Ref ThrottleRateLimit
+      AccessLogSettings:
+        DestinationArn: !GetAtt ApiGatewayLogGroup.Arn
+        Format: >-
+          {"requestId":"$context.requestId","ip":"$context.identity.sourceIp","requestTime":"$context.requestTime","httpMethod":"$context.httpMethod","routeKey":"$context.routeKey","path":"$context.path","status":"$context.status","protocol":"$context.protocol","responseLength":"$context.responseLength","integrationError":"$context.integrationErrorMessage","latency":"$context.responseLatency"}
+      Tags:
+        Application: !Ref AWS::StackName
+
+  PublicFunctionApiPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref PublicFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*"
+
+  # ================================================================
+  #  S3 Sync Bucket
+  # ================================================================
+  SyncBucket:
+    Type: AWS::S3::Bucket
+    DependsOn: SyncBucketPermission
+    Properties:
+      BucketName: !Sub "${AWS::StackName}-sync-${AWS::AccountId}"
+      LifecycleConfiguration:
+        Rules:
+          - Id: AutoDeleteOldDBs
+            Status: Enabled
+            ExpirationInDays: 7
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: s3:ObjectCreated:*
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: suffix
+                    Value: .db
+            Function: !GetAtt SyncFunction.Arn
+      Tags:
+        - Key: Application
+          Value: !Ref AWS::StackName
+
+  # ================================================================
+  #  IAM Role — Sync Lambda
+  # ================================================================
+  SyncFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AWS::StackName}-sync-lambda-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub "${AWS::StackName}-sync-logs"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${AWS::StackName}-sync:*"
+        - PolicyName: !Sub "${AWS::StackName}-sync-dynamodb"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:GetItem
+                  - dynamodb:Query
+                  - dynamodb:DeleteItem
+                  - dynamodb:BatchWriteItem
+                  - dynamodb:Scan
+                  - dynamodb:DescribeTable
+                Resource:
+                  - !GetAtt TrixieTable.Arn
+        - PolicyName: !Sub "${AWS::StackName}-sync-s3"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource:
+                  - !Sub "arn:aws:s3:::${AWS::StackName}-sync-${AWS::AccountId}/*"
+
+  # ================================================================
+  #  Sync Lambda Function
+  # ================================================================
+  SyncFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: SyncFunctionLogGroup
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-sync"
+      Description: !Sub "${AWS::StackName} DB sync Lambda (S3-triggered)"
+      Runtime: provided.al2023
+      Architectures:
+        - arm64
+      Handler: bootstrap
+      MemorySize: 256
+      Timeout: 300
+      Role: !GetAtt SyncFunctionRole.Arn
+      Code:
+        S3Bucket: !Ref PublicLambdaS3Bucket
+        S3Key: !Ref SyncLambdaS3Key
+      LoggingConfig:
+        LogGroup: !Ref SyncFunctionLogGroup
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: !Ref TrixieTable
+          SYNC_BUCKET: !Sub "${AWS::StackName}-sync-${AWS::AccountId}"
+      Tags:
+        - Key: Application
+          Value: !Ref AWS::StackName
+
+  SyncBucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref SyncFunction
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceArn: !Sub "arn:aws:s3:::${AWS::StackName}-sync-${AWS::AccountId}"
+      SourceAccount: !Ref AWS::AccountId
+
+Outputs:
+  PublicApiUrl:
+    Description: Public API endpoint URL
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/"
+
+  TrixieTableName:
+    Description: DynamoDB table name
+    Value: !Ref TrixieTable
+
+  SyncBucketName:
+    Description: S3 bucket for uploading SQLite DB files
+    Value: !Sub "${AWS::StackName}-sync-${AWS::AccountId}"
+
+  PublicFunctionName:
+    Description: Public Lambda function name
+    Value: !Ref PublicFunction
+
+  SyncFunctionName:
+    Description: Sync Lambda function name
+    Value: !Ref SyncFunction
+
+  SyncCommand:
+    Description: Command to sync your local database to DynamoDB
+    Value: !Sub "aws s3 cp qr-tracker.db s3://${AWS::StackName}-sync-${AWS::AccountId}/qr-tracker.db"

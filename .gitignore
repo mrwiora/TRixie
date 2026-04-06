@@ -8,6 +8,8 @@ qr-tracker-admin
 qr-tracker-public
 qr-tracker.db
 qr-item-tracker
+bootstrap
+trixie-sync
 
 # Test binary, built with `go test -c`
 *.test
@@ -41,5 +43,11 @@ go.work
 .DS_Store
 Thumbs.db
 
+# SAM / AWS
+.aws-sam/
+samconfig.toml
+
 # Logs
 *.log
+
+.build/
