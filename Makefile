@@ -46,6 +46,8 @@ help:
 	@echo "  make aws-outputs   - Show stack outputs (API URL, bucket name, etc.)"
 	@echo "  make aws-delete    - Tear down the entire stack"
 	@echo ""
+	@echo "  Custom domain:  AWS_CUSTOM_DOMAIN=found.example.com AWS_HOSTED_ZONE_ID=Z0123... make aws-deploy"
+	@echo ""
 	@echo "Data Sync:"
 	@echo "  make sync          - Sync local SQLite DB to DynamoDB (CLI, direct)"
 	@echo "  make sync-s3       - Upload .db to S3 (triggers Lambda sync)"
@@ -198,9 +200,15 @@ quickstart: build sample
 # ---------------------------------------------------------------------------
 
 # Configuration — override on the command line or export in your shell:
-#   make aws-deploy AWS_STACK=my-trixie AWS_REGION=us-east-1
+#   make aws-deploy AWS_STACK=my-trixie AWS_REGION=us-east-1 AWS_CUSTOM_DOMAIN=found.example.com AWS_HOSTED_ZONE_ID=Z0123...
 AWS_STACK  ?= trixie
 AWS_REGION ?= eu-central-1
+# Custom domain (e.g. found.example.com). Leave empty to skip.
+# When set, ACM cert + Route53 ALIAS record are created automatically.
+AWS_CUSTOM_DOMAIN ?=
+# Route53 Hosted Zone ID for the custom domain. Required when AWS_CUSTOM_DOMAIN is set.
+# Find it with: aws route53 list-hosted-zones
+AWS_HOSTED_ZONE_ID ?=
 # The S3 bucket that holds Lambda deployment ZIPs.
 # Created automatically by `aws-package` if it doesn't exist.
 AWS_DEPLOY_BUCKET ?= trixie-deploy-$(shell aws sts get-caller-identity --query Account --output text 2>/dev/null || echo "UNKNOWN")
@@ -233,8 +241,14 @@ aws-deploy: aws-package
 		--parameters \
 			ParameterKey=PublicLambdaS3Bucket,ParameterValue=$(AWS_DEPLOY_BUCKET) \
 			ParameterKey=PublicLambdaS3Key,ParameterValue=lambda/trixie-public.zip \
-			ParameterKey=SyncLambdaS3Key,ParameterValue=lambda/trixie-sync.zip
-	@echo "⏳ Waiting for stack creation to complete..."
+			ParameterKey=SyncLambdaS3Key,ParameterValue=lambda/trixie-sync.zip \
+			ParameterKey=CustomDomain,ParameterValue=$(AWS_CUSTOM_DOMAIN) \
+			ParameterKey=HostedZoneId,ParameterValue=$(AWS_HOSTED_ZONE_ID)
+	@if [ -n "$(AWS_CUSTOM_DOMAIN)" ]; then \
+		echo "⏳ Waiting for stack creation (ACM cert auto-validates via Route53)..."; \
+	else \
+		echo "⏳ Waiting for stack creation to complete..."; \
+	fi
 	aws cloudformation wait stack-create-complete \
 		--stack-name $(AWS_STACK) \
 		--region $(AWS_REGION)
@@ -252,7 +266,9 @@ aws-update: aws-package
 		--parameters \
 			ParameterKey=PublicLambdaS3Bucket,ParameterValue=$(AWS_DEPLOY_BUCKET) \
 			ParameterKey=PublicLambdaS3Key,ParameterValue=lambda/trixie-public.zip \
-			ParameterKey=SyncLambdaS3Key,ParameterValue=lambda/trixie-sync.zip
+			ParameterKey=SyncLambdaS3Key,ParameterValue=lambda/trixie-sync.zip \
+			ParameterKey=CustomDomain,ParameterValue=$(AWS_CUSTOM_DOMAIN) \
+			ParameterKey=HostedZoneId,ParameterValue=$(AWS_HOSTED_ZONE_ID)
 	@echo "⏳ Waiting for stack update to complete..."
 	aws cloudformation wait stack-update-complete \
 		--stack-name $(AWS_STACK) \

@@ -39,6 +39,24 @@ Parameters:
     AllowedValues: [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365]
     Description: Number of days to retain CloudWatch log events
 
+  CustomDomain:
+    Type: String
+    Default: ""
+    Description: >
+      Custom domain name for the API (e.g. found.example.com).
+      Leave empty to skip custom domain setup.
+
+  HostedZoneId:
+    Type: String
+    Default: ""
+    Description: >
+      Route53 Hosted Zone ID for the custom domain (e.g. Z0123456789ABCDEFGHIJ).
+      Required when CustomDomain is set. The zone must be in the same AWS account.
+      Find it with: aws route53 list-hosted-zones
+
+Conditions:
+  HasCustomDomain: !Not [!Equals [!Ref CustomDomain, ""]]
+
 Resources:
   # ================================================================
   #  DynamoDB
@@ -213,6 +231,64 @@ Resources:
       SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*"
 
   # ================================================================
+  #  Custom Domain (conditional — only created when CustomDomain is set)
+  # ================================================================
+
+  # ACM certificate for the custom domain (DNS-validated via Route53)
+  Certificate:
+    Type: AWS::CertificateManager::Certificate
+    Condition: HasCustomDomain
+    Properties:
+      DomainName: !Ref CustomDomain
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: !Ref CustomDomain
+          HostedZoneId: !Ref HostedZoneId
+      Tags:
+        - Key: Application
+          Value: !Ref AWS::StackName
+
+  # API Gateway custom domain name
+  ApiDomainName:
+    Type: AWS::ApiGatewayV2::DomainName
+    Condition: HasCustomDomain
+    DependsOn: Certificate
+    Properties:
+      DomainName: !Ref CustomDomain
+      DomainNameConfigurations:
+        - CertificateArn: !Ref Certificate
+          EndpointType: REGIONAL
+          SecurityPolicy: TLS_1_2
+      Tags:
+        Application: !Ref AWS::StackName
+
+  # Map the custom domain to the API stage
+  ApiMapping:
+    Type: AWS::ApiGatewayV2::ApiMapping
+    Condition: HasCustomDomain
+    DependsOn:
+      - ApiStage
+      - ApiDomainName
+    Properties:
+      ApiId: !Ref HttpApi
+      DomainName: !Ref CustomDomain
+      Stage: !Ref ApiStage
+
+  # Route53 ALIAS record pointing the custom domain to the API Gateway
+  DnsRecord:
+    Type: AWS::Route53::RecordSet
+    Condition: HasCustomDomain
+    DependsOn: ApiDomainName
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref CustomDomain
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt ApiDomainName.RegionalDomainName
+        HostedZoneId: !GetAtt ApiDomainName.RegionalHostedZoneId
+        EvaluateTargetHealth: false
+
+  # ================================================================
   #  S3 Sync Bucket
   # ================================================================
   SyncBucket:
@@ -328,8 +404,13 @@ Resources:
 
 Outputs:
   PublicApiUrl:
-    Description: Public API endpoint URL
+    Description: Public API endpoint URL (default API Gateway domain)
     Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/"
+
+  CustomDomainUrl:
+    Condition: HasCustomDomain
+    Description: Public URL via custom domain (DNS record created automatically)
+    Value: !Sub "https://${CustomDomain}/"
 
   TrixieTableName:
     Description: DynamoDB table name
