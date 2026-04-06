@@ -1,6 +1,6 @@
 .PHONY: help build clean run-public run-admin run-both deps test install \
         build-lambda build-sync sync sync-dry-run \
-        aws-package aws-deploy aws-update aws-delete aws-status aws-outputs
+        aws-package aws-deploy aws-update aws-push aws-delete aws-status aws-outputs
 
 # Version information from git
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -41,7 +41,8 @@ help:
 	@echo "AWS Deployment (requires aws cli v2):"
 	@echo "  make aws-package   - Build binaries, create ZIPs, upload to S3"
 	@echo "  make aws-deploy    - First-time deploy (create stack)"
-	@echo "  make aws-update    - Update existing stack + Lambda code"
+	@echo "  make aws-update    - Update stack infrastructure + Lambda code"
+	@echo "  make aws-push      - Code-only deploy (no CloudFormation, fast)"
 	@echo "  make aws-status    - Show stack status"
 	@echo "  make aws-outputs   - Show stack outputs (API URL, bucket name, etc.)"
 	@echo "  make aws-delete    - Tear down the entire stack"
@@ -212,22 +213,24 @@ AWS_HOSTED_ZONE_ID ?=
 # The S3 bucket that holds Lambda deployment ZIPs.
 # Created automatically by `aws-package` if it doesn't exist.
 AWS_DEPLOY_BUCKET ?= trixie-deploy-$(shell aws sts get-caller-identity --query Account --output text 2>/dev/null || echo "UNKNOWN")
+# Unique version tag appended to S3 keys so CloudFormation detects code changes
+DEPLOY_VERSION := $(shell date -u +%Y%m%d%H%M%S)-$(shell git rev-parse --short HEAD 2>/dev/null || echo "manual")
 
 # Build Lambda binaries and upload deployment ZIPs to S3
 aws-package: build-lambda build-sync
-	@echo "📦 Packaging Lambda ZIPs..."
+	@echo "📦 Packaging Lambda ZIPs (version: $(DEPLOY_VERSION))..."
 	@mkdir -p .build
 	@# Public Lambda — pure Go, no CGO
 	cd .build && cp ../bootstrap . && zip trixie-public.zip bootstrap && rm bootstrap
-	@# Sync Lambda — needs CGO (SQLite), already built as trixie-sync
+	@# Sync Lambda — pure Go (modernc.org/sqlite), no CGO
 	cd .build && cp ../trixie-sync bootstrap && zip trixie-sync.zip bootstrap && rm bootstrap
 	@echo "☁️  Ensuring S3 bucket exists: $(AWS_DEPLOY_BUCKET)"
 	@aws s3api head-bucket --bucket $(AWS_DEPLOY_BUCKET) --region $(AWS_REGION) 2>/dev/null || \
 		aws s3api create-bucket --bucket $(AWS_DEPLOY_BUCKET) --region $(AWS_REGION) \
 			--create-bucket-configuration LocationConstraint=$(AWS_REGION)
 	@echo "☁️  Uploading ZIPs to s3://$(AWS_DEPLOY_BUCKET)/lambda/"
-	aws s3 cp .build/trixie-public.zip s3://$(AWS_DEPLOY_BUCKET)/lambda/trixie-public.zip --region $(AWS_REGION)
-	aws s3 cp .build/trixie-sync.zip   s3://$(AWS_DEPLOY_BUCKET)/lambda/trixie-sync.zip   --region $(AWS_REGION)
+	aws s3 cp .build/trixie-public.zip s3://$(AWS_DEPLOY_BUCKET)/lambda/trixie-public-$(DEPLOY_VERSION).zip --region $(AWS_REGION)
+	aws s3 cp .build/trixie-sync.zip   s3://$(AWS_DEPLOY_BUCKET)/lambda/trixie-sync-$(DEPLOY_VERSION).zip   --region $(AWS_REGION)
 	@echo "✅ Packaging complete"
 
 # First-time deploy — create the CloudFormation stack
@@ -240,8 +243,8 @@ aws-deploy: aws-package
 		--region $(AWS_REGION) \
 		--parameters \
 			ParameterKey=PublicLambdaS3Bucket,ParameterValue=$(AWS_DEPLOY_BUCKET) \
-			ParameterKey=PublicLambdaS3Key,ParameterValue=lambda/trixie-public.zip \
-			ParameterKey=SyncLambdaS3Key,ParameterValue=lambda/trixie-sync.zip \
+			ParameterKey=PublicLambdaS3Key,ParameterValue=lambda/trixie-public-$(DEPLOY_VERSION).zip \
+			ParameterKey=SyncLambdaS3Key,ParameterValue=lambda/trixie-sync-$(DEPLOY_VERSION).zip \
 			ParameterKey=CustomDomain,ParameterValue=$(AWS_CUSTOM_DOMAIN) \
 			ParameterKey=HostedZoneId,ParameterValue=$(AWS_HOSTED_ZONE_ID)
 	@if [ -n "$(AWS_CUSTOM_DOMAIN)" ]; then \
@@ -255,9 +258,9 @@ aws-deploy: aws-package
 	@echo "✅ Stack created successfully!"
 	@$(MAKE) aws-outputs
 
-# Update existing stack (template changes + fresh Lambda code)
+# Update existing stack (infrastructure + code — versioned S3 keys force CF to detect changes)
 aws-update: aws-package
-	@echo "☁️  Updating CloudFormation stack: $(AWS_STACK)"
+	@echo "☁️  Updating CloudFormation stack: $(AWS_STACK) (version: $(DEPLOY_VERSION))"
 	aws cloudformation update-stack \
 		--stack-name $(AWS_STACK) \
 		--template-body file://sam-template.yaml \
@@ -265,38 +268,43 @@ aws-update: aws-package
 		--region $(AWS_REGION) \
 		--parameters \
 			ParameterKey=PublicLambdaS3Bucket,ParameterValue=$(AWS_DEPLOY_BUCKET) \
-			ParameterKey=PublicLambdaS3Key,ParameterValue=lambda/trixie-public.zip \
-			ParameterKey=SyncLambdaS3Key,ParameterValue=lambda/trixie-sync.zip \
+			ParameterKey=PublicLambdaS3Key,ParameterValue=lambda/trixie-public-$(DEPLOY_VERSION).zip \
+			ParameterKey=SyncLambdaS3Key,ParameterValue=lambda/trixie-sync-$(DEPLOY_VERSION).zip \
 			ParameterKey=CustomDomain,ParameterValue=$(AWS_CUSTOM_DOMAIN) \
 			ParameterKey=HostedZoneId,ParameterValue=$(AWS_HOSTED_ZONE_ID)
 	@echo "⏳ Waiting for stack update to complete..."
 	aws cloudformation wait stack-update-complete \
 		--stack-name $(AWS_STACK) \
 		--region $(AWS_REGION)
-	@echo "🔄 Updating Lambda function code (public)..."
+	@echo "✅ Stack updated successfully!"
+	@$(MAKE) aws-outputs
+
+# Code-only deploy — skip CloudFormation, just push new binaries to Lambda directly (fast)
+aws-push: aws-package
+	@echo "🔄 Pushing new Lambda code (version: $(DEPLOY_VERSION))..."
 	@PUBLIC_FN=$$(aws cloudformation describe-stacks \
 		--stack-name $(AWS_STACK) --region $(AWS_REGION) \
 		--query 'Stacks[0].Outputs[?OutputKey==`PublicFunctionName`].OutputValue' \
 		--output text) && \
+	echo "   → $$PUBLIC_FN" && \
 	aws lambda update-function-code \
 		--function-name "$$PUBLIC_FN" \
 		--s3-bucket $(AWS_DEPLOY_BUCKET) \
-		--s3-key lambda/trixie-public.zip \
+		--s3-key lambda/trixie-public-$(DEPLOY_VERSION).zip \
 		--architectures arm64 \
-		--region $(AWS_REGION)
-	@echo "🔄 Updating Lambda function code (sync)..."
+		--region $(AWS_REGION) > /dev/null
 	@SYNC_FN=$$(aws cloudformation describe-stacks \
 		--stack-name $(AWS_STACK) --region $(AWS_REGION) \
 		--query 'Stacks[0].Outputs[?OutputKey==`SyncFunctionName`].OutputValue' \
 		--output text) && \
+	echo "   → $$SYNC_FN" && \
 	aws lambda update-function-code \
 		--function-name "$$SYNC_FN" \
 		--s3-bucket $(AWS_DEPLOY_BUCKET) \
-		--s3-key lambda/trixie-sync.zip \
+		--s3-key lambda/trixie-sync-$(DEPLOY_VERSION).zip \
 		--architectures arm64 \
-		--region $(AWS_REGION)
-	@echo "✅ Stack updated successfully!"
-	@$(MAKE) aws-outputs
+		--region $(AWS_REGION) > /dev/null
+	@echo "✅ Lambda code updated!"
 
 # Show stack status
 aws-status:
